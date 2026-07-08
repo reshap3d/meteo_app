@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteo App Pro - Dettaglio Orario</title>
+    <title>Meteo App Pro - Oggi e Prossimi Giorni</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f3; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 950px; margin: 0 auto; }
@@ -20,50 +20,59 @@
         .current-sky-icon { font-size: 4rem; margin: 5px 0; }
         .temp-current { font-size: 3.5rem; font-weight: bold; color: #0077b6; margin: 5px 0; }
         .temp-range-current { font-size: 1.2rem; margin-bottom: 15px; }
-        .details-current { display: flex; justify-content: center; gap: 20px; color: #666; font-size: 1.1rem; border-top: 1px solid #eee; padding-top: 15px; flex-wrap: wrap; }
+        .details-current { display: flex; justify-content: center; gap: 15px; color: #666; font-size: 1rem; border-top: 1px solid #eee; padding-top: 15px; flex-wrap: wrap; }
         
-        .forecast-title { margin: 30px 0 15px 0; color: #1d3557; }
+        /* Sezione Oggi */
+        .section-title { margin: 30px 0 15px 0; color: #1d3557; font-size: 1.4rem; }
+        .today-hourly-box { background: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; margin-bottom: 25px; }
         
-        /* Stili per i blocchi dei Giorni e delle Tendine */
+        /* Tabelle Generiche */
+        .hourly-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 550px; }
+        .hourly-table th { color: #0077b6; font-weight: 600; text-align: left; padding: 10px 8px; border-bottom: 2px solid #eef2f3; }
+        .hourly-table td { padding: 12px 8px; border-bottom: 1px solid #f1f1f1; }
+        .hourly-table tr:last-child td { border-bottom: none; }
+        
+        /* Blocchi Richiudibili (7 giorni) */
         .day-collapse { background: white; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; }
         summary { padding: 18px; font-size: 1.1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; list-style: none; }
-        summary::-webkit-details-marker { display: none; } /* Rimuove la freccia nativa di Chrome */
+        summary::-webkit-details-marker { display: none; }
         
         .summary-content { display: flex; align-items: center; justify-content: space-between; width: 100%; }
         .summary-left { display: flex; align-items: center; gap: 15px; min-width: 220px; }
-        .summary-right { display: flex; gap: 20px; text-align: right; }
+        .summary-right { display: flex; gap: 20px; text-align: right; align-items: center; }
         
         .forecast-icon { font-size: 1.6rem; }
         .temp-max { color: #e63946; font-weight: bold; }
         .temp-min { color: #457b9d; font-weight: bold; }
         
-        /* Contenuto interno orario (Tabella nascosta) */
-        .hourly-content { padding: 0 18px 18px 18px; border-top: 1px dashed #ddd; background: #fdfdfd; }
-        .hourly-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }
-        .hourly-table th { color: #0077b6; font-weight: 600; text-align: left; padding: 8px; border-bottom: 2px solid #eef2f3; }
-        .hourly-table td { padding: 10px 8px; border-bottom: 1px solid #f1f1f1; }
-        .hourly-table tr:last-child td { border-bottom: none; }
-        
+        .hourly-content { padding: 0 18px 18px 18px; border-top: 1px dashed #ddd; background: #fdfdfd; overflow-x: auto; }
         .error-message { color: #e63946; background: #fbe8e8; padding: 12px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        
+        /* Indice UV */
+        .uv-badge { padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; color: white; }
+        .uv-0-2 { background-color: #28a745; }
+        .uv-3-5 { background-color: #ffc107; color: #333; }
+        .uv-6-7 { background-color: #fd7e14; }
+        .uv-8-10 { background-color: #dc3545; }
+        .uv-11plus { background-color: #6f42c1; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="controls-box">
-        <input type="text" id="city-input" placeholder="Inserisci una città (es. Milano, Parigi...)" value="Verona">
+        <input type="text" id="city-input" placeholder="Inserisci una città..." value="Verona">
         <select id="model-select" onchange="cercaLocalita()">
             <option value="auto">Modello: Automatico (Seamless)</option>
-            <option value="ecmwf_ifs">Modello: ECMWF (Europeo - Alta precisione)</option>
-            <option value="icon_eu">Modello: ICON-EU (Tedesco - Dettaglio locale)</option>
-            <option value="gfs_seamless">Modello: GFS (Americano - Standard)</option>
+            <option value="ecmwf_ifs">Modello: ECMWF (Europeo)</option>
+            <option value="icon_eu">Modello: ICON-EU (Tedesco)</option>
+            <option value="gfs_seamless">Modello: GFS (Americano)</option>
         </select>
         <button onclick="cercaLocalita()">Cerca</button>
     </div>
 
     <div id="error-box" class="error-message"></div>
 
-    <!-- Scheda Meteo Attuale -->
     <div class="card-current" id="current-weather-card" style="display: none;">
         <h2 class="city-name" id="display-city">--</h2>
         <div class="model-badge" id="display-model">Modello: --</div>
@@ -79,15 +88,35 @@
             <span id="current-humidity">Umidità: --%</span>
             <span>•</span>
             <span id="current-rain">Pioggia oggi: -- mm</span>
+            <span>•</span>
+            <span id="current-uv">Indice UV: --</span>
         </div>
     </div>
 
-    <!-- Contenitore Previsioni 7 Giorni Richiudibili -->
-    <div id="forecast-section" style="display: none;">
-        <h3 class="forecast-title">Previsioni 7 giorni (Clicca su un giorno per espandere l'orario)</h3>
-        <div id="forecast-list">
-            <!-- I blocchi <details> generati da JS andranno qui -->
+    <div id="today-hourly-section" style="display: none;">
+        <h3 class="section-title">Previsione Oraria di Oggi (Ogni 2 ore)</h3>
+        <div class="today-hourly-box">
+            <table class="hourly-table">
+                <thead>
+                    <tr>
+                        <th>Orario</th>
+                        <th>Cielo</th>
+                        <th>Temp</th>
+                        <th>Umidità</th>
+                        <th>Vento</th>
+                        <th>Indice UV</th>
+                    </tr>
+                </thead>
+                <tbody id="today-hourly-body">
+                    </tbody>
+            </table>
         </div>
+    </div>
+
+    <div id="forecast-section" style="display: none;">
+        <h3 class="section-title">Previsioni prossimi 7 giorni (Clicca per espandere)</h3>
+        <div id="forecast-list">
+            </div>
     </div>
 </div>
 
@@ -105,6 +134,14 @@
         return { icon: "❓", desc: "Sconosciuto" };
     }
 
+    function getUVDettagli(uv) {
+        if (uv <= 2.4) return { classe: "uv-0-2", desc: "Basso" };
+        if (uv <= 5.4) return { classe: "uv-3-5", desc: "Moderato" };
+        if (uv <= 7.4) return { classe: "uv-6-7", desc: "Alto" };
+        if (uv <= 10.4) return { classe: "uv-8-10", desc: "Molto Alto" };
+        return { classe: "uv-11plus", desc: "Estremo" };
+    }
+
     async function cercaLocalita() {
         const query = document.getElementById('city-input').value.trim();
         const modelloSelezionato = document.getElementById('model-select').value;
@@ -114,7 +151,6 @@
         errorBox.style.display = 'none';
 
         try {
-            // 1. GEOCoding
             const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=it`;
             const geocodeResponse = await fetch(geocodeUrl);
             const geocodeData = await geocodeResponse.json();
@@ -132,18 +168,19 @@
                 modelParam = `&models=${modelloSelezionato}`;
             }
 
-            // 2. Chiamata API estesa con i parametri "hourly" per temperatura, codice meteo, umidità e vento
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,relative_humidity_2m_max,wind_speed_10m_max&hourly=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m&timezone=auto${modelParam}`;
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,uv_index&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,uv_index_max&hourly=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,uv_index&timezone=auto${modelParam}`;
             
             const weatherResponse = await fetch(weatherUrl);
             const weatherData = await weatherResponse.json();
 
             const datiNormalizzati = estraiDatiMeteo(weatherData, modelloSelezionato);
 
-            // 3. Render Interfaccia
             document.getElementById('display-model').innerText = document.getElementById('model-select').options[document.getElementById('model-select').selectedIndex].text;
             mostraMeteoAttuale(nomeCompleto, datiNormalizzati.current, datiNormalizzati.daily);
-            mostraPrevisioniEOrari(datiNormalizzati.daily, datiNormalizzati.hourly);
+            
+            // Genera le due sezioni separate (oggi e i prossimi giorni)
+            mostraOrarioOggi(datiNormalizzati.hourly);
+            mostraPrevisioniFuturate(datiNormalizzati.daily, datiNormalizzati.hourly);
 
         } catch (error) {
             console.error(error);
@@ -164,6 +201,8 @@
 
     function mostraMeteoAttuale(nomeCitta, datiAttuali, datiGiornalieri) {
         const infoMeteo = getMeteoIcona(datiAttuali.weather_code);
+        const uvInfo = getUVDettagli(datiAttuali.uv_index);
+
         document.getElementById('display-city').innerText = nomeCitta;
         document.getElementById('current-icon').innerText = infoMeteo.icon;
         document.getElementById('current-temp').innerText = `${Math.round(datiAttuali.temperature_2m)}°C`;
@@ -172,48 +211,77 @@
         document.getElementById('current-wind').innerText = `Vento: ${datiAttuali.wind_speed_10m} km/h`;
         document.getElementById('current-humidity').innerText = `Umidità: ${datiAttuali.relative_humidity_2m}%`;
         document.getElementById('current-rain').innerText = `Pioggia oggi: ${datiGiornalieri.precipitation_sum[0]} mm`;
+        document.getElementById('current-uv').innerHTML = `☀️ UV: <span class="uv-badge ${uvInfo.classe}">${datiAttuali.uv_index.toFixed(1)} (${uvInfo.desc})</span>`;
+        
         document.getElementById('current-weather-card').style.display = 'block';
     }
 
-    // Funzione che unisce la visualizzazione dei giorni alle tabelle orarie
-    function mostraPrevisioniEOrari(daily, hourly) {
+    // NUOVA FUNZIONE: Genera la tabella ad hoc per le 24 ore di OGGI
+    function mostraOrarioOggi(hourly) {
+        const tbody = document.getElementById('today-hourly-body');
+        tbody.innerHTML = '';
+
+        // Le prime 24 ore dell'array corrispondono a oggi (da h=0 a h=23)
+        for (let h = 0; h < 24; h += 2) {
+            const stringaOra = hourly.time[h].split('T')[1]; 
+            const tempOra = Math.round(hourly.temperature_2m[h]);
+            const iconaMeteo = getMeteoIcona(hourly.weather_code[h]);
+            const umiditaOra = hourly.relative_humidity_2m[h];
+            const ventoOra = Math.round(hourly.wind_speed_10m[h]);
+            const uvOra = hourly.uv_index[h];
+            const uvOraInfo = getUVDettagli(uvOra);
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${stringaOra}</strong></td>
+                    <td><span title="${iconaMeteo.desc}">${iconaMeteo.icon}</span> <small style="color:#777; margin-left:4px;">${iconaMeteo.desc}</small></td>
+                    <td><strong>${tempOra}°C</strong></td>
+                    <td>💧 ${umiditaOra}%</td>
+                    <td>💨 ${ventoOra} km/h</td>
+                    <td>☀️ UV: <span class="uv-badge ${uvOraInfo.classe}">${uvOra.toFixed(1)}</span></td>
+                </tr>
+            `;
+        }
+        document.getElementById('today-hourly-section').style.display = 'block';
+    }
+
+    function mostraPrevisioniFuturate(daily, hourly) {
         const container = document.getElementById('forecast-list');
         container.innerHTML = ''; 
 
-        // Ciclo sui 7 giorni
-        for (let i = 0; i < daily.time.length; i++) {
+        // Cicliamo dal giorno 1 (domani) anziché da 0, evitando di duplicare la tendina di oggi
+        for (let i = 1; i < daily.time.length; i++) {
             const dataOpzioni = { weekday: 'long', day: '2-digit', month: '2-digit' };
             const dataFormattata = new Date(daily.time[i]).toLocaleDateString('it-IT', dataOpzioni);
             const infoMeteo = getMeteoIcona(daily.weather_code[i]);
+            const uvMaxGiorno = daily.uv_index_max[i];
+            const uvMaxInfo = getUVDettagli(uvMaxGiorno);
 
-            // Costruiamo le righe della tabella oraria interna (saltando di 2 ore in 2 ore)
             let righeOrarieHtml = '';
-            
-            // L'API restituisce un array piatto di 168 ore (24 ore * 7 giorni).
-            // L'indice di partenza per il giorno corrente si calcola moltiplicando il giorno 'i' per 24.
             const startOraIndex = i * 24;
             const endOraIndex = startOraIndex + 24;
 
             for (let h = startOraIndex; h < endOraIndex; h += 2) {
-                // Estraiamo solo l'ora (stringa formato "2026-05-15T08:00" -> prende "08:00")
                 const stringaOra = hourly.time[h].split('T')[1]; 
                 const tempOra = Math.round(hourly.temperature_2m[h]);
                 const iconaOra = getMeteoIcona(hourly.weather_code[h]).icon;
                 const umiditaOra = hourly.relative_humidity_2m[h];
                 const ventoOra = Math.round(hourly.wind_speed_10m[h]);
+                const uvOra = hourly.uv_index[h];
+                const uvOraInfo = getUVDettagli(uvOra);
 
                 righeOrarieHtml += `
                     <tr>
                         <td><strong>${stringaOra}</strong></td>
                         <td>${iconaOra}</td>
                         <td>${tempOra}°C</td>
-                        <td>💧 Unidità: ${umiditaOra}%</td>
-                        <td>💨 Vento: ${ventoOra} km/h</td>
+                        <td>💧 ${umiditaOra}%</td>
+                        <td>💨 ${ventoOra} km/h</td>
+                        <td>☀️ UV: <span class="uv-badge ${uvOraInfo.classe}">${uvOra.toFixed(1)}</span></td>
                     </tr>
                 `;
             }
 
-            // Generiamo la struttura collassabile HTML usando il tag <details>
             const dayBlock = `
                 <details class="day-collapse">
                     <summary>
@@ -224,8 +292,9 @@
                             </div>
                             <div class="summary-right">
                                 <span><span class="temp-max">${Math.round(daily.temperature_2m_max[i])}°C</span> / <span class="temp-min">${Math.round(daily.temperature_2m_min[i])}°C</span></span>
-                                <span style="color: #666; min-width: 70px;">🌧️ ${daily.precipitation_sum[i]} mm</span>
-                                <span style="font-size: 0.85rem; color:#0077b6;">▼ Espandi</span>
+                                <span style="color: #666; min-width: 65px;">🌧️ ${daily.precipitation_sum[i]} mm</span>
+                                <span style="min-width: 90px; text-align: left;">☀️ UV Max: <span class="uv-badge ${uvMaxInfo.classe}">${Math.round(uvMaxGiorno)}</span></span>
+                                <span style="font-size: 0.85rem; color:#0077b6;">▼</span>
                             </div>
                         </div>
                     </summary>
@@ -238,6 +307,7 @@
                                     <th>Temp</th>
                                     <th>Umidità</th>
                                     <th>Vento</th>
+                                    <th>Indice UV</th>
                                 </tr>
                             </thead>
                             <tbody>
