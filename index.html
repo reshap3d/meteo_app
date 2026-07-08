@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meteo App Pro - Dettaglio Orario</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f3; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 950px; margin: 0 auto; }
+        
+        .controls-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        input { flex: 2; min-width: 200px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        select { flex: 1; min-width: 180px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background: white; cursor: pointer; }
+        button { padding: 12px 24px; background: #0077b6; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #0096c7; }
+        
+        .card-current { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; margin-bottom: 20px; }
+        .city-name { font-size: 1.8rem; margin: 0 0 5px 0; color: #1d3557; }
+        .model-badge { display: inline-block; background: #e2eafc; color: #2f3e46; font-size: 0.85rem; padding: 4px 10px; border-radius: 20px; font-weight: 600; margin-bottom: 15px; }
+        .current-sky-icon { font-size: 4rem; margin: 5px 0; }
+        .temp-current { font-size: 3.5rem; font-weight: bold; color: #0077b6; margin: 5px 0; }
+        .temp-range-current { font-size: 1.2rem; margin-bottom: 15px; }
+        .details-current { display: flex; justify-content: center; gap: 20px; color: #666; font-size: 1.1rem; border-top: 1px solid #eee; padding-top: 15px; flex-wrap: wrap; }
+        
+        .forecast-title { margin: 30px 0 15px 0; color: #1d3557; }
+        
+        /* Stili per i blocchi dei Giorni e delle Tendine */
+        .day-collapse { background: white; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; }
+        summary { padding: 18px; font-size: 1.1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; list-style: none; }
+        summary::-webkit-details-marker { display: none; } /* Rimuove la freccia nativa di Chrome */
+        
+        .summary-content { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+        .summary-left { display: flex; align-items: center; gap: 15px; min-width: 220px; }
+        .summary-right { display: flex; gap: 20px; text-align: right; }
+        
+        .forecast-icon { font-size: 1.6rem; }
+        .temp-max { color: #e63946; font-weight: bold; }
+        .temp-min { color: #457b9d; font-weight: bold; }
+        
+        /* Contenuto interno orario (Tabella nascosta) */
+        .hourly-content { padding: 0 18px 18px 18px; border-top: 1px dashed #ddd; background: #fdfdfd; }
+        .hourly-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }
+        .hourly-table th { color: #0077b6; font-weight: 600; text-align: left; padding: 8px; border-bottom: 2px solid #eef2f3; }
+        .hourly-table td { padding: 10px 8px; border-bottom: 1px solid #f1f1f1; }
+        .hourly-table tr:last-child td { border-bottom: none; }
+        
+        .error-message { color: #e63946; background: #fbe8e8; padding: 12px; border-radius: 8px; margin-bottom: 20px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="controls-box">
+        <input type="text" id="city-input" placeholder="Inserisci una città (es. Milano, Parigi...)" value="Bologna">
+        <select id="model-select" onchange="cercaLocalita()">
+            <option value="auto">Modello: Automatico (Seamless)</option>
+            <option value="ecmwf_ifs">Modello: ECMWF (Europeo - Alta precisione)</option>
+            <option value="icon_eu">Modello: ICON-EU (Tedesco - Dettaglio locale)</option>
+            <option value="gfs_seamless">Modello: GFS (Americano - Standard)</option>
+        </select>
+        <button onclick="cercaLocalita()">Cerca</button>
+    </div>
+
+    <div id="error-box" class="error-message"></div>
+
+    <!-- Scheda Meteo Attuale -->
+    <div class="card-current" id="current-weather-card" style="display: none;">
+        <h2 class="city-name" id="display-city">--</h2>
+        <div class="model-badge" id="display-model">Modello: --</div>
+        <div class="current-sky-icon" id="current-icon">☀️</div>
+        <div class="temp-current" id="current-temp">--°C</div>
+        <div class="temp-range-current">
+            <span class="temp-max" id="current-max">Max: --°C</span> / 
+            <span class="temp-min" id="current-min">Min: --°C</span>
+        </div>
+        <div class="details-current">
+            <span id="current-wind">Vento: -- km/h</span>
+            <span>•</span>
+            <span id="current-humidity">Umidità: --%</span>
+            <span>•</span>
+            <span id="current-rain">Pioggia oggi: -- mm</span>
+        </div>
+    </div>
+
+    <!-- Contenitore Previsioni 7 Giorni Richiudibili -->
+    <div id="forecast-section" style="display: none;">
+        <h3 class="forecast-title">Previsioni 7 giorni (Clicca su un giorno per espandere l'orario)</h3>
+        <div id="forecast-list">
+            <!-- I blocchi <details> generati da JS andranno qui -->
+        </div>
+    </div>
+</div>
+
+<script>
+    function getMeteoIcona(code) {
+        if (code === 0) return { icon: "☀️", desc: "Sereno" };
+        if ([1, 2, 3].includes(code)) return { icon: "⛅", desc: "Nuvoloso" };
+        if ([45, 48].includes(code)) return { icon: "🌫️", desc: "Nebbia" };
+        if ([51, 53, 55, 56, 57].includes(code)) return { icon: "🌦️", desc: "Pioggerellina" };
+        if ([61, 63, 65, 66, 67].includes(code)) return { icon: "🌧️", desc: "Pioggia" };
+        if ([71, 73, 75, 77].includes(code)) return { icon: "🌨️", desc: "Neve" };
+        if ([80, 81, 82].includes(code)) return { icon: "🌧️", desc: "Rovesci" };
+        if ([85, 86].includes(code)) return { icon: "🌨️", desc: "Rovesci di Neve" };
+        if ([95, 96, 99].includes(code)) return { icon: "⛈️", desc: "Temporale" };
+        return { icon: "❓", desc: "Sconosciuto" };
+    }
+
+    async function cercaLocalita() {
+        const query = document.getElementById('city-input').value.trim();
+        const modelloSelezionato = document.getElementById('model-select').value;
+        const errorBox = document.getElementById('error-box');
+        
+        if (!query) return;
+        errorBox.style.display = 'none';
+
+        try {
+            // 1. GEOCoding
+            const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=it`;
+            const geocodeResponse = await fetch(geocodeUrl);
+            const geocodeData = await geocodeResponse.json();
+
+            if (!geocodeData.results || geocodeData.results.length === 0) {
+                mostraErrore("Località non trovata.");
+                return;
+            }
+
+            const { latitude, longitude, name, country } = geocodeData.results[0];
+            const nomeCompleto = `${name}, ${country}`;
+
+            let modelParam = "";
+            if (modelloSelezionato !== "auto") {
+                modelParam = `&models=${modelloSelezionato}`;
+            }
+
+            // 2. Chiamata API estesa con i parametri "hourly" per temperatura, codice meteo, umidità e vento
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,relative_humidity_2m_max,wind_speed_10m_max&hourly=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m&timezone=auto${modelParam}`;
+            
+            const weatherResponse = await fetch(weatherUrl);
+            const weatherData = await weatherResponse.json();
+
+            const datiNormalizzati = estraiDatiMeteo(weatherData, modelloSelezionato);
+
+            // 3. Render Interfaccia
+            document.getElementById('display-model').innerText = document.getElementById('model-select').options[document.getElementById('model-select').selectedIndex].text;
+            mostraMeteoAttuale(nomeCompleto, datiNormalizzati.current, datiNormalizzati.daily);
+            mostraPrevisioniEOrari(datiNormalizzati.daily, datiNormalizzati.hourly);
+
+        } catch (error) {
+            console.error(error);
+            mostraErrore("Si è verificato un errore durante il recupero dei dati.");
+        }
+    }
+
+    function estraiDatiMeteo(data, modello) {
+        if (modello === "auto" || !data[modello]) {
+            return { current: data.current, daily: data.daily, hourly: data.hourly };
+        }
+        return { 
+            current: data[`current_${modello}`] || data.current, 
+            daily: data[`daily_${modello}`] || data.daily,
+            hourly: data[`hourly_${modello}`] || data.hourly
+        };
+    }
+
+    function mostraMeteoAttuale(nomeCitta, datiAttuali, datiGiornalieri) {
+        const infoMeteo = getMeteoIcona(datiAttuali.weather_code);
+        document.getElementById('display-city').innerText = nomeCitta;
+        document.getElementById('current-icon').innerText = infoMeteo.icon;
+        document.getElementById('current-temp').innerText = `${Math.round(datiAttuali.temperature_2m)}°C`;
+        document.getElementById('current-max').innerText = `Max: ${Math.round(datiGiornalieri.temperature_2m_max[0])}°C`;
+        document.getElementById('current-min').innerText = `Min: ${Math.round(datiGiornalieri.temperature_2m_min[0])}°C`;
+        document.getElementById('current-wind').innerText = `Vento: ${datiAttuali.wind_speed_10m} km/h`;
+        document.getElementById('current-humidity').innerText = `Umidità: ${datiAttuali.relative_humidity_2m}%`;
+        document.getElementById('current-rain').innerText = `Pioggia oggi: ${datiGiornalieri.precipitation_sum[0]} mm`;
+        document.getElementById('current-weather-card').style.display = 'block';
+    }
+
+    // Funzione che unisce la visualizzazione dei giorni alle tabelle orarie
+    function mostraPrevisioniEOrari(daily, hourly) {
+        const container = document.getElementById('forecast-list');
+        container.innerHTML = ''; 
+
+        // Ciclo sui 7 giorni
+        for (let i = 0; i < daily.time.length; i++) {
+            const dataOpzioni = { weekday: 'long', day: '2-digit', month: '2-digit' };
+            const dataFormattata = new Date(daily.time[i]).toLocaleDateString('it-IT', dataOpzioni);
+            const infoMeteo = getMeteoIcona(daily.weather_code[i]);
+
+            // Costruiamo le righe della tabella oraria interna (saltando di 2 ore in 2 ore)
+            let righeOrarieHtml = '';
+            
+            // L'API restituisce un array piatto di 168 ore (24 ore * 7 giorni).
+            // L'indice di partenza per il giorno corrente si calcola moltiplicando il giorno 'i' per 24.
+            const startOraIndex = i * 24;
+            const endOraIndex = startOraIndex + 24;
+
+            for (let h = startOraIndex; h < endOraIndex; h += 2) {
+                // Estraiamo solo l'ora (stringa formato "2026-05-15T08:00" -> prende "08:00")
+                const stringaOra = hourly.time[h].split('T')[1]; 
+                const tempOra = Math.round(hourly.temperature_2m[h]);
+                const iconaOra = getMeteoIcona(hourly.weather_code[h]).icon;
+                const umiditaOra = hourly.relative_humidity_2m[h];
+                const ventoOra = Math.round(hourly.wind_speed_10m[h]);
+
+                righeOrarieHtml += `
+                    <tr>
+                        <td><strong>${stringaOra}</strong></td>
+                        <td>${iconaOra}</td>
+                        <td>${tempOra}°C</td>
+                        <td>💧 Unidità: ${umiditaOra}%</td>
+                        <td>💨 Vento: ${ventoOra} km/h</td>
+                    </tr>
+                `;
+            }
+
+            // Generiamo la struttura collassabile HTML usando il tag <details>
+            const dayBlock = `
+                <details class="day-collapse">
+                    <summary>
+                        <div class="summary-content">
+                            <div class="summary-left">
+                                <span class="forecast-icon" title="${infoMeteo.desc}">${infoMeteo.icon}</span>
+                                <span style="text-transform: capitalize;"><strong>${dataFormattata}</strong></span>
+                            </div>
+                            <div class="summary-right">
+                                <span><span class="temp-max">${Math.round(daily.temperature_2m_max[i])}°C</span> / <span class="temp-min">${Math.round(daily.temperature_2m_min[i])}°C</span></span>
+                                <span style="color: #666; min-width: 70px;">🌧️ ${daily.precipitation_sum[i]} mm</span>
+                                <span style="font-size: 0.85rem; color:#0077b6;">▼ Espandi</span>
+                            </div>
+                        </div>
+                    </summary>
+                    <div class="hourly-content">
+                        <table class="hourly-table">
+                            <thead>
+                                <tr>
+                                    <th>Orario</th>
+                                    <th>Cielo</th>
+                                    <th>Temp</th>
+                                    <th>Umidità</th>
+                                    <th>Vento</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${righeOrarieHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            `;
+            container.innerHTML += dayBlock;
+        }
+
+        document.getElementById('forecast-section').style.display = 'block';
+    }
+
+    function mostraErrore(messaggio) {
+        const errorBox = document.getElementById('error-box');
+        errorBox.innerText = messaggio;
+        errorBox.style.display = 'block';
+    }
+
+    window.onload = cercaLocalita;
+</script>
+
+</body>
+</html>
