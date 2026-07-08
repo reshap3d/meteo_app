@@ -33,7 +33,7 @@
         .today-hourly-box { background: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; margin-bottom: 25px; }
         
         /* Tabelle */
-        .hourly-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 550px; }
+        .hourly-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 580px; }
         .hourly-table th { color: #0077b6; font-weight: 600; text-align: left; padding: 10px 8px; border-bottom: 2px solid #eef2f3; }
         .hourly-table td { padding: 12px 8px; border-bottom: 1px solid #f1f1f1; }
         .hourly-table tr:last-child td { border-bottom: none; }
@@ -47,7 +47,6 @@
         .summary-left { display: flex; align-items: center; gap: 12px; }
         .summary-right { display: flex; gap: 15px; text-align: right; align-items: center; justify-content: flex-end; }
         
-        /* Adattamento specifico per schermi piccoli */
         @media (max-width: 480px) {
             .summary-content { flex-direction: column; align-items: flex-start; gap: 8px; }
             .summary-right { width: 100%; justify-content: space-between; border-top: 1px dashed #eee; padding-top: 8px; }
@@ -123,6 +122,7 @@
                         <th>Orario</th>
                         <th>Cielo</th>
                         <th>Temp</th>
+                        <th>Pioggia</th>
                         <th>Umidità</th>
                         <th>Vento</th>
                         <th>Indice UV</th>
@@ -177,7 +177,7 @@
             const geocodeData = await geocodeResponse.json();
 
             if (!geocodeData.results || geocodeData.results.length === 0) {
-                mostraErrore("Località non trovata.");
+                mostraErrore("Località non trouvata.");
                 return;
             }
 
@@ -189,7 +189,8 @@
                 modelParam = `&models=${modelloSelezionato}`;
             }
 
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,uv_index&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,uv_index_max&hourly=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,uv_index&timezone=auto${modelParam}`;
+            // AGGIUNTI: precipitation_probability (hourly) e precipitation_probability_max (daily)
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,uv_index&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max&hourly=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,uv_index,precipitation_probability&timezone=auto${modelParam}`;
             
             const weatherResponse = await fetch(weatherUrl);
             const weatherData = await weatherResponse.json();
@@ -239,7 +240,9 @@
         document.getElementById('current-min').innerText = `Min: ${Math.round(datiGiornalieri.temperature_2m_min[0])}°C`;
         document.getElementById('current-wind').innerText = `Vento: ${datiAttuali.wind_speed_10m} km/h`;
         document.getElementById('current-humidity').innerText = `Umidità: ${datiAttuali.relative_humidity_2m}%`;
-        document.getElementById('current-rain').innerText = `Pioggia oggi: ${datiGiornalieri.precipitation_sum[0]} mm`;
+        // Mostra anche la probabilità massima di pioggia stimata per oggi
+        const probPioggiaOggi = datiGiornalieri.precipitation_probability_max ? datiGiornalieri.precipitation_probability_max[0] : 0;
+        document.getElementById('current-rain').innerText = `Pioggia oggi: ${datiGiornalieri.precipitation_sum[0]} mm (${probPioggiaOggi}%)`;
         document.getElementById('current-uv').innerHTML = `☀️ UV: <span class="uv-badge ${uvInfo.classe}">${datiAttuali.uv_index.toFixed(1)} (${uvInfo.desc})</span>`;
         
         document.getElementById('current-weather-card').style.display = 'block';
@@ -257,15 +260,17 @@
             const ventoOra = Math.round(hourly.wind_speed_10m[h]);
             const uvOra = hourly.uv_index[h];
             const uvOraInfo = getUVDettagli(uvOra);
+            const probPioggiaOra = hourly.precipitation_probability ? hourly.precipitation_probability[h] : 0;
 
             tbody.innerHTML += `
                 <tr>
                     <td><strong>${stringaOra}</strong></td>
                     <td><span title="${iconaMeteo.desc}">${iconaMeteo.icon}</span> <small style="color:#777; margin-left:4px;">${iconaMeteo.desc}</small></td>
                     <td><strong>${tempOra}°C</strong></td>
-                    <td>💧 ${umiditaOra}%</td>
+                    <td>💧 <strong>${probPioggiaOra}%</strong></td>
+                    <td>${umiditaOra}%</td>
                     <td>💨 ${ventoOra} km/h</td>
-                    <td>☀️ UV: <span class="uv-badge ${uvOraInfo.classe}">${uvOra.toFixed(1)}</span></td>
+                    <td>☀️ <span class="uv-badge ${uvOraInfo.classe}">${uvOra.toFixed(1)}</span></td>
                 </tr>
             `;
         }
@@ -282,6 +287,7 @@
             const infoMeteo = getMeteoIcona(daily.weather_code[i]);
             const uvMaxGiorno = daily.uv_index_max[i];
             const uvMaxInfo = getUVDettagli(uvMaxGiorno);
+            const probPioggiaMaxGiorno = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : 0;
 
             let righeOrarieHtml = '';
             const startOraIndex = i * 24;
@@ -295,15 +301,17 @@
                 const ventoOra = Math.round(hourly.wind_speed_10m[h]);
                 const uvOra = hourly.uv_index[h];
                 const uvOraInfo = getUVDettagli(uvOra);
+                const probPioggiaOra = hourly.precipitation_probability ? hourly.precipitation_probability[h] : 0;
 
                 righeOrarieHtml += `
                     <tr>
                         <td><strong>${stringaOra}</strong></td>
                         <td>${iconaOra}</td>
                         <td>${tempOra}°C</td>
-                        <td>💧 ${umiditaOra}%</td>
+                        <td>💧 <strong>${probPioggiaOra}%</strong></td>
+                        <td>${umiditaOra}%</td>
                         <td>💨 ${ventoOra} km/h</td>
-                        <td>☀️ UV: <span class="uv-badge ${uvOraInfo.classe}">${uvOra.toFixed(1)}</span></td>
+                        <td>☀️ <span class="uv-badge ${uvOraInfo.classe}">${uvOra.toFixed(1)}</span></td>
                     </tr>
                 `;
             }
@@ -318,7 +326,7 @@
                             </div>
                             <div class="summary-right">
                                 <span><span class="temp-max">${Math.round(daily.temperature_2m_max[i])}°C</span> / <span class="temp-min">${Math.round(daily.temperature_2m_min[i])}°C</span></span>
-                                <span>🌧️ ${daily.precipitation_sum[i]} mm</span>
+                                <span>🌧️ ${daily.precipitation_sum[i]} mm (${probPioggiaMaxGiorno}%)</span>
                                 <span>☀️ UV: <span class="uv-badge ${uvMaxInfo.classe}">${Math.round(uvMaxGiorno)}</span></span>
                                 <span style="font-size: 0.85rem; color:#0077b6;">▼</span>
                             </div>
@@ -331,6 +339,7 @@
                                     <th>Orario</th>
                                     <th>Cielo</th>
                                     <th>Temp</th>
+                                    <th>Pioggia</th>
                                     <th>Umidità</th>
                                     <th>Vento</th>
                                     <th>Indice UV</th>
