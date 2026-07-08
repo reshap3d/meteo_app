@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteo App Pro - Oggi, Radar e Prossimi Giorni</title>
+    <title>Meteo App Ultimate - Pro</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -24,75 +24,72 @@
 
         .container { max-width: 950px; margin: 0 auto; }
         
-        /* Controlli */
-        .controls-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
-        .input-group { display: flex; flex: 2; min-width: 240px; gap: 5px; }
+        /* Controlli e Autocompletamento */
+        .controls-box { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; position: relative; }
+        .search-container { display: flex; flex: 2; min-width: 240px; gap: 5px; position: relative; }
         input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
         
-        /* Pulsante Geolocalizzazione */
+        /* Suggerimenti ricerca */
+        .suggestions-box { 
+            position: absolute; top: 100%; left: 0; right: 53px; 
+            background: white; border: 1px solid #ccc; border-radius: 8px; 
+            max-height: 200px; overflow-y: auto; z-index: 1000; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: none;
+        }
+        .suggestion-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 0.95rem; color: #333; }
+        .suggestion-item:hover { background: #f0f7ff; color: #0077b6; }
+
         .btn-geo { padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; width: 48px; }
         .btn-geo.attivo { background: #2a9d8f; box-shadow: 0 0 10px rgba(42, 157, 143, 0.5); }
-        .btn-geo:hover { transform: scale(1.05); }
-
         select { flex: 1; min-width: 180px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background: white; cursor: pointer; }
         button.btn-cerca { padding: 12px 24px; background: #0077b6; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
         button.btn-cerca:hover { background: #0096c7; }
         
-        /* Banner Allerte Meteo Dinamico */
-        .alert-banner {
-            background: #ef4444;
-            color: white;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            display: none;
-            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
-            animation: slideDown 0.5s ease-out;
-        }
-        .alert-banner h4 { margin: 0 0 5px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+        /* Sezione Preferiti */
+        .favorites-container { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+        .btn-fav-item { background: rgba(255, 255, 255, 0.7); border: 1px solid #ddd; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
+        .btn-fav-item:hover { background: white; border-color: #0077b6; }
+        .btn-delete-fav { border: none; background: transparent; color: #cc3333; cursor: pointer; font-weight: bold; padding: 0 2px; }
+
+        /* Banner Allerte */
+        .alert-banner { background: #ef4444; color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: none; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); animation: slideDown 0.5s ease-out; }
+        .alert-banner h4 { margin: 0 0 5px 0; font-size: 1.1rem; }
         .alert-banner p { margin: 0; font-size: 0.95rem; }
 
         /* Scheda Corrente */
         .card-current { 
-            background: rgba(255, 255, 255, 0.9); 
-            backdrop-filter: blur(5px);
-            padding: 25px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-            text-align: center; 
-            margin-bottom: 20px; 
-            display: none;
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(5px);
+            padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            text-align: center; margin-bottom: 20px; display: none; position: relative;
             animation: fadeIn 0.6s ease-out forwards;
         }
+        .btn-add-favorite { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.6rem; cursor: pointer; transition: transform 0.2s; }
+        .btn-add-favorite:hover { transform: scale(1.2); }
+        
         .city-name { font-size: 1.8rem; margin: 0 0 5px 0; color: #1d3557; }
         .model-badge { display: inline-block; background: #e2eafc; color: #2f3e46; font-size: 0.85rem; padding: 4px 10px; border-radius: 20px; font-weight: 600; margin-bottom: 15px; }
         .current-sky-icon { font-size: 4rem; margin: 5px 0; display: inline-block; animation: float 3s ease-in-out infinite; }
         .temp-current { font-size: 3.5rem; font-weight: bold; color: #0077b6; margin: 5px 0; }
         .temp-range-current { font-size: 1.2rem; margin-bottom: 15px; }
-        .details-current { display: flex; justify-content: center; gap: 15px; color: #555; font-size: 1rem; border-top: 1px solid #ddd; padding-top: 15px; flex-wrap: wrap; }
         
+        .details-current { display: flex; justify-content: center; gap: 15px; color: #555; font-size: 1rem; border-top: 1px solid #ddd; padding-top: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .astro-details { display: flex; justify-content: center; gap: 25px; color: #444; font-size: 0.95rem; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 8px; }
+
         .section-title { margin: 30px 0 15px 0; color: #1d3557; font-size: 1.4rem; }
         
-        /* Box Radar */
+        /* Box Radar e Tabelle */
         .radar-link-box { background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; margin-bottom: 25px; }
-        .btn-radar { display: inline-flex; align-items: center; gap: 10px; background: #2a9d8f; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 1.1rem; transition: transform 0.2s, background-color 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .btn-radar:hover { background: #264653; transform: scale(1.03); }
-
-        /* Sezione Oraria Oggi */
+        .btn-radar { display: inline-flex; align-items: center; gap: 10px; background: #2a9d8f; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 1.1rem; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-radar:hover { transform: scale(1.03); }
         .today-hourly-box { background: rgba(255, 255, 255, 0.9); padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; margin-bottom: 25px; }
         
-        /* Tabelle */
         .hourly-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 580px; }
         .hourly-table th { color: #0077b6; font-weight: 600; text-align: left; padding: 10px 8px; border-bottom: 2px solid #eef2f3; }
         .hourly-table td { padding: 12px 8px; border-bottom: 1px solid #f1f1f1; }
-        .hourly-table tr:last-child td { border-bottom: none; }
         
-        /* Blocchi Richiudibili */
         .day-collapse { background: rgba(255, 255, 255, 0.9); margin-bottom: 12px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; }
-        summary { padding: 15px; font-size: 1.05rem; cursor: pointer; user-select: none; list-style: none; transition: background 0.2s; }
+        summary { padding: 15px; font-size: 1.05rem; cursor: pointer; user-select: none; list-style: none; }
         summary:hover { background: rgba(0,0,0,0.02); }
-        summary::-webkit-details-marker { display: none; }
-        
         .summary-content { display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 10px; }
         .summary-left { display: flex; align-items: center; gap: 12px; }
         .summary-right { display: flex; gap: 15px; text-align: right; align-items: center; justify-content: flex-end; }
@@ -105,7 +102,6 @@
         .forecast-icon { font-size: 1.6rem; }
         .temp-max { color: #e63946; font-weight: bold; }
         .temp-min { color: #457b9d; font-weight: bold; }
-        
         .hourly-content { padding: 0 18px 18px 18px; border-top: 1px dashed #ddd; background: rgba(253, 253, 253, 0.5); overflow-x: auto; animation: fadeIn 0.3s ease-out; }
         .error-message { color: #e63946; background: #fbe8e8; padding: 12px; border-radius: 8px; margin-bottom: 20px; display: none; }
         
@@ -116,28 +112,20 @@
         .uv-8-10 { background-color: #dc3545; }
         .uv-11plus { background-color: #6f42c1; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-6px); }
-            100% { transform: translateY(0px); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- Area Ricerca e Controlli -->
     <div class="controls-box">
-        <div class="input-group">
-            <input type="text" id="city-input" placeholder="Inserisci una città...">
-            <button id="geo-btn" class="btn-geo" onclick="attivaGeolocalizzazione()" title="Usa posizione attuale">📍</button>
+        <div class="search-container">
+            <input type="text" id="city-input" placeholder="Cerca una località..." autocomplete="off" oninput="gestisciAutocompletamento()">
+            <div id="suggestions" class="suggestions-box"></div>
+            <button id="geo-btn" class="btn-geo" onclick="attivaGeolocalizzazione()" title="Usa GPS attuale">📍</button>
         </div>
         <select id="model-select" onchange="avviaRicercaMeteo()">
             <option value="auto">Modello: Automatico (Seamless)</option>
@@ -148,83 +136,81 @@
         <button class="btn-cerca" onclick="disattivaGeoECerca()">Cerca</button>
     </div>
 
+    <!-- Lista Città Preferite -->
+    <div id="favorites-list" class="favorites-container"></div>
+
+    <!-- Banner Allerte -->
     <div id="alert-box" class="alert-banner">
-        <h4 id="alert-title">⚠️ ALLERTA METEO ATTIVA</h4>
-        <p id="alert-text">Nessuna allerta critica registrata.</p>
+        <h4>⚠️ ALLERTA METEO ATTIVA</h4>
+        <p id="alert-text">Nessuna allerta critica.</p>
     </div>
 
     <div id="error-box" class="error-message"></div>
 
+    <!-- Scheda Meteo Attuale -->
     <div class="card-current" id="current-weather-card">
+        <button class="btn-add-favorite" onclick="aggiungiAiPreferiti()" title="Salva nei preferiti">⭐</button>
         <h2 class="city-name" id="display-city">--</h2>
         <div class="model-badge" id="display-model">Modello: --</div>
         <div><span class="current-sky-icon" id="current-icon">☀️</span></div>
         <div class="temp-current" id="current-temp">--°C</div>
         <div class="temp-range-current">
-            <span class="temp-max" id="current-max">Max: --°C</span> / 
-            <span class="temp-min" id="current-min">Min: --°C</span>
+            <span class="temp-max" id="current-max">Max: --°C</span> / <span class="temp-min" id="current-min">Min: --°C</span>
         </div>
         <div class="details-current">
-            <span id="current-wind">Vento: -- km/h</span>
-            <span>•</span>
-            <span id="current-humidity">Umidità: --%</span>
-            <span>•</span>
-            <span id="current-rain">Pioggia oggi: -- mm</span>
-            <span>•</span>
+            <span id="current-wind">Vento: -- km/h</span> • 
+            <span id="current-humidity">Umidità: --%</span> • 
+            <span id="current-rain">Pioggia oggi: -- mm</span> • 
             <span id="current-uv">Indice UV: --</span>
         </div>
-    </div>
-
-    <div id="radar-section" style="display: none; animation: fadeIn 0.6s ease-out;">
-        <h3 class="section-title">Radar Precipitazioni Real-time</h3>
-        <div class="radar-link-box">
-            <p style="margin: 0 0 15px 0; color: #555;">Controlla i temporali e la pioggia in tempo reale sulla mappa animata di Windy:</p>
-            <a id="radar-external-btn" href="#" target="_blank" class="btn-radar">
-                🛰️ Apri Radar Live per <span id="radar-city-name">questa città</span>
-            </a>
+        <!-- Nuova sezione Alba e Tramonto -->
+        <div class="astro-details">
+            <span id="current-sunrise">🌅 Alba: --:--</span>
+            <span id="current-sunset">🌇 Tramonto: --:--</span>
+            <span id="current-daylight">⏱️ Ore di luce: --h</span>
         </div>
     </div>
 
-    <div id="today-hourly-section" style="display: none; animation: fadeIn 0.6s ease-out;">
+    <!-- Radar Precipitazioni Live -->
+    <div id="radar-section" style="display: none;">
+        <h3 class="section-title">Radar Precipitazioni Real-time</h3>
+        <div class="radar-link-box">
+            <p style="margin: 0 0 15px 0; color: #555;">Controlla temporali e perturbazioni live sulla mappa di Windy:</p>
+            <a id="radar-external-btn" href="#" target="_blank" class="btn-radar">🛰️ Apri Radar Live per <span id="radar-city-name">questa città</span></a>
+        </div>
+    </div>
+
+    <!-- Previsione Oraria -->
+    <div id="today-hourly-section" style="display: none;">
         <h3 class="section-title">Previsione Oraria di Oggi (Ogni 2 ore)</h3>
         <div class="today-hourly-box">
             <table class="hourly-table">
                 <thead>
-                    <tr>
-                        <th>Orario</th>
-                        <th>Cielo</th>
-                        <th>Temp</th>
-                        <th>Pioggia</th>
-                        <th>Umidità</th>
-                        <th>Vento</th>
-                        <th>Indice UV</th>
-                    </tr>
+                    <tr><th>Orario</th><th>Cielo</th><th>Temp</th><th>Pioggia</th><th>Umidità</th><th>Vento</th><th>Indice UV</th></tr>
                 </thead>
-                <tbody id="today-hourly-body">
-                    </tbody>
+                <tbody id="today-hourly-body"></tbody>
             </table>
         </div>
     </div>
 
-    <div id="forecast-section" style="display: none; animation: fadeIn 0.6s ease-out;">
+    <!-- Previsioni 7 Giorni -->
+    <div id="forecast-section" style="display: none;">
         <h3 class="section-title">Previsioni prossimi 7 giorni (Clicca per espandere)</h3>
-        <div id="forecast-list">
-            </div>
+        <div id="forecast-list"></div>
     </div>
 </div>
 
 <script>
     let coordinateGeolocalizzate = null;
+    let localitaCorrenteData = null; // Memorizza i dati della località visualizzata per i preferiti
+    let timerAutocompletamento;
 
     function getMeteoIcona(code) {
         if (code === 0) return { icon: "☀️", desc: "Sereno", classeTema: "tema-sereno" };
         if ([1, 2, 3].includes(code)) return { icon: "⛅", desc: "Nuvoloso", classeTema: "tema-nuvoloso" };
         if ([45, 48].includes(code)) return { icon: "🌫️", desc: "Nebbia", classeTema: "tema-nebbia" };
-        if ([51, 53, 55, 56, 57].includes(code)) return { icon: "🌦️", desc: "Pioggerellina", classeTema: "tema-pioggia" };
-        if ([61, 63, 65, 66, 67].includes(code)) return { icon: "🌧️", desc: "Pioggia", classeTema: "tema-pioggia" };
-        if ([71, 73, 75, 77].includes(code)) return { icon: "🌨️", desc: "Neve", classeTema: "tema-neve" };
-        if ([80, 81, 82].includes(code)) return { icon: "🌧️", desc: "Rovesci", classeTema: "tema-pioggia" };
-        if ([85, 86].includes(code)) return { icon: "🌨️", desc: "Rovesci di Neve", classeTema: "tema-neve" };
+        if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { icon: "🌧️", desc: "Pioggia", classeTema: "tema-pioggia" };
+        if ([71, 73, 75, 77, 85, 86].includes(code)) return { icon: "🌨️", desc: "Neve", classeTema: "tema-neve" };
         if ([95, 96, 99].includes(code)) return { icon: "⛈️", desc: "Temporale", classeTema: "tema-temporale" };
         return { icon: "❓", desc: "Sconosciuto", classeTema: "" };
     }
@@ -239,165 +225,162 @@
 
     function impostaTemaDinamico(classeTema) {
         document.body.className = '';
-        if (classeTema) {
-            document.body.classList.add(classeTema);
-        }
+        if (classeTema) document.body.classList.add(classeTema);
     }
 
-    function controllaAllerteMeteo(datiAttuali, datiGiornalieri) {
-        const alertBox = document.getElementById('alert-box');
-        const alertText = document.getElementById('alert-text');
+    // 1. GESTIONE AUTOCOMPLETAMENTO INTELLIGENTE
+    function gestisciAutocompletamento() {
+        clearTimeout(timerAutocompletamento);
+        const input = document.getElementById('city-input').value.trim();
+        const box = document.getElementById('suggestions');
         
-        let allerte = [];
-        const tMaxOggi = datiGiornalieri.temperature_2m_max[0];
-        const tMinOggi = datiGiornalieri.temperature_2m_min[0];
-        const ventoAttuale = datiAttuali.wind_speed_10m;
-        const codiceMeteo = datiAttuali.weather_code;
+        if (input.length < 3) { box.style.display = 'none'; return; }
 
-        if (tMaxOggi >= 38) allerte.push(`Caldo Estremo previsto oggi (Picco di ${Math.round(tMaxOggi)}°C).`);
-        if (tMinOggi <= -4) allerte.push(`Gelate intense pericolose (${Math.round(tMinOggi)}°C). Rischio ghiaccio.`);
-        if (ventoAttuale >= 45) allerte.push(`Vento molto forte attivo in zona (${ventoAttuale} km/h).`);
-        if ([95, 96, 99].includes(codiceMeteo)) allerte.push(`Temporale violento o grandinate in corso o imminenti.`);
+        timerAutocompletamento = setTimeout(async () => {
+            try {
+                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(input)}&count=5&language=it`);
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    box.innerHTML = data.results.map(loc => `
+                        <div class="suggestion-item" onclick="selezionaSuggerimento(${loc.latitude}, ${loc.longitude}, '${loc.name.replace(/'/g, "\\'")}', '${loc.country.replace(/'/g, "\\'")}')">
+                            📍 <strong>${loc.name}</strong>, ${loc.admin1 || ''} (${loc.country})
+                        </div>
+                    `).join('');
+                    box.style.display = 'block';
+                } else {
+                    box.style.display = 'none';
+                }
+            } catch (e) { console.error(e); }
+        }, 300);
+    }
 
-        if (allerte.length > 0) {
-            alertText.innerHTML = allerte.map(a => `• ${a}`).join('<br>');
-            alertBox.style.display = 'block';
-        } else {
-            alertBox.style.display = 'none';
+    function selezionaSuggerimento(lat, lon, nome, nazione) {
+        document.getElementById('suggestions').style.display = 'none';
+        document.getElementById('city-input').value = `${nome}, ${nazione}`;
+        coordinateGeolocalizzate = { lat, lon, nomeCustom: `${nome}, ${nazione}`, nomeSemplice: nome };
+        document.getElementById('geo-btn').classList.remove('attivo');
+        avviaRicercaMeteo();
+    }
+
+    // Hide suggestions box if clicking outside
+    document.addEventListener('click', (e) => {
+        if (e.target.id !== 'city-input') document.getElementById('suggestions').style.display = 'none';
+    });
+
+    // 2. MEMORIA PREFERITI (LOCALSTORAGE)
+    function mostraPreferiti() {
+        const preferiti = JSON.parse(localStorage.getItem('meteo_preferiti')) || [];
+        const container = document.getElementById('favorites-list');
+        if (preferiti.length === 0) { container.innerHTML = ''; return; }
+        
+        container.innerHTML = preferiti.map(p => `
+            <div class="btn-fav-item" onclick="caricaPreferito(${p.lat}, ${p.lon}, '${p.name.replace(/'/g, "\\'")}')">
+                ⭐ ${p.name}
+                <button class="btn-delete-fav" onclick="rimuoviPreferito(event, '${p.name.replace(/'/g, "\\'")}')">×</button>
+            </div>
+        `).join('');
+    }
+
+    function aggiungiAiPreferiti() {
+        if (!localitaCorrenteData) return;
+        let preferiti = JSON.parse(localStorage.getItem('meteo_preferiti')) || [];
+        if (!preferiti.some(p => p.name === localitaCorrenteData.name)) {
+            preferiti.push(localitaCorrenteData);
+            localStorage.setItem('meteo_preferiti', JSON.stringify(preferiti));
+            mostraPreferiti();
         }
     }
 
-    // DISATTIVAZIONE MANUALE DELLA GEOLOCALIZZAZIONE
+    function rimuoviPreferito(event, nome) {
+        event.stopPropagation(); // Evita di lanciare il clic sul preferito stesso
+        let preferiti = JSON.parse(localStorage.getItem('meteo_preferiti')) || [];
+        preferiti = preferiti.filter(p => p.name !== nome);
+        localStorage.setItem('meteo_preferiti', JSON.stringify(preferiti));
+        mostraPreferiti();
+    }
+
+    function caricaPreferito(lat, lon, nome) {
+        coordinateGeolocalizzate = { lat, lon, nomeCustom: nome, nomeSemplice: nome.split(',')[0] };
+        document.getElementById('city-input').value = nome;
+        document.getElementById('geo-btn').classList.remove('attivo');
+        avviaRicercaMeteo();
+    }
+
+    // 3. GEOLOCALIZZAZIONE E LOGICA CORE
     function disattivaGeoECerca() {
         coordinateGeolocalizzate = null; 
         document.getElementById('geo-btn').classList.remove('attivo');
         avviaRicercaMeteo();
     }
 
-    // ATTIVAZIONE E RICHIESTA GPS DEL BROWSER
     function attivaGeolocalizzazione() {
         const geoBtn = document.getElementById('geo-btn');
-        const errorBox = document.getElementById('error-box');
-        errorBox.style.display = 'none';
-
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
-                    coordinateGeolocalizzate = {
-                        lat: position.coords.latitude,
-                        lon: position.coords.longitude
-                    };
+                    coordinateGeolocalizzate = { lat: position.coords.latitude, lon: position.coords.longitude };
                     geoBtn.classList.add('attivo');
-                    document.getElementById('city-input').value = ""; // Svuota la barra se attiva il GPS
+                    document.getElementById('city-input').value = "";
                     avviaRicercaMeteo();
                 },
-                (error) => {
-                    console.error(error);
-                    mostraErrore("Impossibile accedere alla geolocalizzazione. Verifica i permessi del browser.");
-                    geoBtn.classList.remove('attivo');
-                }
+                () => { mostraErrore("GPS non autorizzato o non accessibile."); geoBtn.classList.remove('attivo'); }
             );
-        } else {
-            mostraErrore("La geolocalizzazione non è supportata dal tuo browser.");
         }
     }
 
-    // CORE: GESTISCE SE SCARICARE I DATI DA GPS O DA SCRITTA TESTUALE
     async function avviaRicercaMeteo() {
         const query = document.getElementById('city-input').value.trim();
         const modelloSelezionato = document.getElementById('model-select').value;
-        const errorBox = document.getElementById('error-box');
-        errorBox.style.display = 'none';
+        document.getElementById('error-box').style.display = 'none';
 
         let latitude, longitude, nomeCompleto, nomeCittaSemplice;
 
         try {
             if (coordinateGeolocalizzate) {
-                // Se il GPS è attivo, ricaviamo le coordinate direttamente
                 latitude = coordinateGeolocalizzate.lat;
                 longitude = coordinateGeolocalizzate.lon;
-                
-                // Ricaviamo il nome della località partendo dalle coordinate (Reverse Geocoding)
-                const reverseUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${latitude},${longitude}&count=1&language=it`;
-                try {
-                    const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-                    const revData = await revRes.json();
-                    nomeCittaSemplice = revData.address.city || revData.address.town || revData.address.village || "Tua Posizione";
-                    nomeCompleto = `${nomeCittaSemplice}, ${revData.address.country || ""}`;
-                } catch(e) {
-                    nomeCittaSemplice = "Tua Posizione";
-                    nomeCompleto = "Tua Posizione Attuale";
+                if (coordinateGeolocalizzate.nomeCustom) {
+                    nomeCompleto = coordinateGeolocalizzate.nomeCustom;
+                    nomeCittaSemplice = coordinateGeolocalizzate.nomeSemplice;
+                } else {
+                    try {
+                        const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                        const revData = await revRes.json();
+                        nomeCittaSemplice = revData.address.city || revData.address.town || "Tua Posizione";
+                        nomeCompleto = `${nomeCittaSemplice}, ${revData.address.country || ""}`;
+                    } catch { nomeCittaSemplice = "Tua Posizione"; nomeCompleto = "Posizione GPS"; }
                 }
             } else {
-                // Altrimenti usiamo la normale ricerca testuale
-                if (!query) {
-                    // Fallback se l'app si avvia vuota (carica Verona di default)
-                    document.getElementById('city-input').value = "Verona";
-                    avviaRicercaMeteo();
-                    return;
-                }
-                
-                const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=it`;
-                const geocodeResponse = await fetch(geocodeUrl);
+                if (!query) { document.getElementById('city-input').value = "Verona"; avviaRicercaMeteo(); return; }
+                const geocodeResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=it`);
                 const geocodeData = await geocodeResponse.json();
-
-                if (!geocodeData.results || geocodeData.results.length === 0) {
-                    mostraErrore("Località non trovata.");
-                    return;
-                }
-
+                if (!geocodeData.results || geocodeData.results.length === 0) { mostraErrore("Località non trovata."); return; }
                 latitude = geocodeData.results[0].latitude;
                 longitude = geocodeData.results[0].longitude;
                 nomeCittaSemplice = geocodeData.results[0].name;
                 nomeCompleto = `${nomeCittaSemplice}, ${geocodeData.results[0].country}`;
             }
 
-            let modelParam = "";
-            if (modelloSelezionato !== "auto") {
-                modelParam = `&models=${modelloSelezionato}`;
-            }
+            // Salviamo la località corrente per il tasto preferiti
+            localitaCorrenteData = { name: nomeCompleto, lat: latitude, lon: longitude };
 
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,uv_index&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max&hourly=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,uv_index,precipitation_probability&timezone=auto${modelParam}`;
+            let modelParam = modelloSelezionato !== "auto" ? `&models=${modelloSelezionato}` : "";
+            // AGGIUNTI: daily=sunrise,sunset per gli orari del sole
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,uv_index&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max,sunrise,sunset&hourly=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,uv_index,precipitation_probability&timezone=auto${modelParam}`;
             
             const weatherResponse = await fetch(weatherUrl);
             const weatherData = await weatherResponse.json();
+            const datiNormalizzati = modelloSelezionato === "auto" || !weatherData[modelloSelezionato] ? weatherData : { current: weatherData[`current_${modelloSelezionato}`], daily: weatherData[`daily_${modelloSelezionato}`], hourly: weatherData[`hourly_${modelloSelezionato}`] };
 
-            const datiNormalizzati = estraiDatiMeteo(weatherData, modelloSelezionato);
-
-            const infoMeteoAttuale = getMeteoIcona(datiNormalizzati.current.weather_code);
-            impostaTemaDinamico(infoMeteoAttuale.classeTema);
-            controllaAllerteMeteo(datiNormalizzati.current, datiNormalizzati.daily);
-
+            impostaTemaDinamico(getMeteoIcona(datiNormalizzati.current.weather_code).classeTema);
             document.getElementById('display-model').innerText = document.getElementById('model-select').options[document.getElementById('model-select').selectedIndex].text;
-            mostraMeteoAttuale(nomeCompleto, datiNormalizzati.current, datiNormalizzati.daily);
             
+            mostraMeteoAttuale(nomeCompleto, datiNormalizzati.current, datiNormalizzati.daily);
             aggiornaLinkRadar(latitude, longitude, nomeCittaSemplice);
-
             mostraOrarioOggi(datiNormalizzati.hourly);
             mostraPrevisioniFuturate(datiNormalizzati.daily, datiNormalizzati.hourly);
 
-        } catch (error) {
-            console.error(error);
-            mostraErrore("Si è verificato un errore durante il recupero dei dati.");
-        }
-    }
-
-    function aggiornaLinkRadar(lat, lon, nomeCitta) {
-        const btn = document.getElementById('radar-external-btn');
-        btn.href = `https://www.windy.com/?radar,${lat},${lon},8`;
-        document.getElementById('radar-city-name').innerText = nomeCitta;
-        document.getElementById('radar-section').style.display = 'block';
-    }
-
-    function estraiDatiMeteo(data, modello) {
-        if (modello === "auto" || !data[modello]) {
-            return { current: data.current, daily: data.daily, hourly: data.hourly };
-        }
-        return { 
-            current: data[`current_${modello}`] || data.current, 
-            daily: data[`daily_${modello}`] || data.daily,
-            hourly: data[`hourly_${modello}`] || data.hourly
-        };
+        } catch (error) { console.error(error); mostraErrore("Errore nel recupero dei dati meteo."); }
     }
 
     function mostraMeteoAttuale(nomeCitta, datiAttuali, datiGiornalieri) {
@@ -413,34 +396,44 @@
         document.getElementById('current-humidity').innerText = `Umidità: ${datiAttuali.relative_humidity_2m}%`;
         const probPioggiaOggi = datiGiornalieri.precipitation_probability_max ? datiGiornalieri.precipitation_probability_max[0] : 0;
         document.getElementById('current-rain').innerText = `Pioggia oggi: ${datiGiornalieri.precipitation_sum[0]} mm (${probPioggiaOggi}%)`;
-        document.getElementById('current-uv').innerHTML = `☀️ UV: <span class="uv-badge ${uvInfo.classe}">${datiAttuali.uv_index.toFixed(1)} (${uvInfo.desc})</span>`;
+        document.getElementById('current-uv').innerHTML = `☀️ UV: <span class="uv-badge ${uvInfo.classe}">${datiAttuali.uv_index.toFixed(1)}</span>`;
         
+        // Formattazione ed estrazione Alba / Tramonto
+        const oraAlba = datiGiornalieri.sunrise[0].split('T')[1];
+        const oraTramonto = datiGiornalieri.sunset[0].split('T')[1];
+        
+        // Calcolo delle ore di luce effettive
+        const diffMs = new Date(datiGiornalieri.sunset[0]) - new Date(datiGiornalieri.sunrise[0]);
+        const oreLuce = (diffMs / (1000 * 60 * 60)).toFixed(1);
+
+        document.getElementById('current-sunrise').innerText = `🌅 Alba: ${oraAlba}`;
+        document.getElementById('current-sunset').innerText = `🌇 Tramonto: ${oraTramonto}`;
+        document.getElementById('current-daylight').innerText = `⏱️ Ore di luce: ${oreLuce}h`;
+
         document.getElementById('current-weather-card').style.display = 'block';
+    }
+
+    function aggiornaLinkRadar(lat, lon, nomeCitta) {
+        const btn = document.getElementById('radar-external-btn');
+        btn.href = `https://www.windy.com/?radar,${lat},${lon},8`;
+        document.getElementById('radar-city-name').innerText = nomeCitta;
+        document.getElementById('radar-section').style.display = 'block';
     }
 
     function mostraOrarioOggi(hourly) {
         const tbody = document.getElementById('today-hourly-body');
         tbody.innerHTML = '';
-
         for (let h = 0; h < 24; h += 2) {
-            const stringaOra = hourly.time[h].split('T')[1]; 
-            const tempOra = Math.round(hourly.temperature_2m[h]);
-            const iconaMeteo = getMeteoIcona(hourly.weather_code[h]);
-            const umiditaOra = hourly.relative_humidity_2m[h];
-            const ventoOra = Math.round(hourly.wind_speed_10m[h]);
-            const uvOra = hourly.uv_index[h];
-            const uvOraInfo = getUVDettagli(uvOra);
-            const probPioggiaOra = hourly.precipitation_probability ? hourly.precipitation_probability[h] : 0;
-
+            const uvOraInfo = getUVDettagli(hourly.uv_index[h]);
             tbody.innerHTML += `
                 <tr>
-                    <td><strong>${stringaOra}</strong></td>
-                    <td><span title="${iconaMeteo.desc}">${iconaMeteo.icon}</span> <small style="color:#777; margin-left:4px;">${iconaMeteo.desc}</small></td>
-                    <td><strong>${tempOra}°C</strong></td>
-                    <td>💧 <strong>${probPioggiaOra}%</strong></td>
-                    <td>${umiditaOra}%</td>
-                    <td>💨 ${ventoOra} km/h</td>
-                    <td>☀️ <span class="uv-badge ${uvOraInfo.classe}">${uvOra.toFixed(1)}</span></td>
+                    <td><strong>${hourly.time[h].split('T')[1]}</strong></td>
+                    <td>${getMeteoIcona(hourly.weather_code[h]).icon} <small style="color:#666;">${getMeteoIcona(hourly.weather_code[h]).desc}</small></td>
+                    <td><strong>${Math.round(hourly.temperature_2m[h])}°C</strong></td>
+                    <td>💧 <strong>${hourly.precipitation_probability ? hourly.precipitation_probability[h] : 0}%</strong></td>
+                    <td>${hourly.relative_humidity_2m[h]}%</td>
+                    <td>💨 ${Math.round(hourly.wind_speed_10m[h])} km/h</td>
+                    <td>☀️ <span class="uv-badge ${uvOraInfo.classe}">${hourly.uv_index[h].toFixed(1)}</span></td>
                 </tr>
             `;
         }
@@ -452,79 +445,48 @@
         container.innerHTML = ''; 
 
         for (let i = 1; i < daily.time.length; i++) {
-            const dataOpzioni = { weekday: 'long', day: '2-digit', month: '2-digit' };
-            const dataFormattata = new Date(daily.time[i]).toLocaleDateString('it-IT', dataOpzioni);
-            const infoMeteo = getMeteoIcona(daily.weather_code[i]);
-            const uvMaxGiorno = daily.uv_index_max[i];
-            const uvMaxInfo = getUVDettagli(uvMaxGiorno);
-            const probPioggiaMaxGiorno = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : 0;
-
+            const dataFormattata = new Date(daily.time[i]).toLocaleDateString('it-IT', { weekday: 'long', day: '2-digit', month: '2-digit' });
             let righeOrarieHtml = '';
-            const startOraIndex = i * 24;
-            const endOraIndex = startOraIndex + 24;
 
-            for (let h = startOraIndex; h < endOraIndex; h += 2) {
-                const stringaOra = hourly.time[h].split('T')[1]; 
-                const tempOra = Math.round(hourly.temperature_2m[h]);
-                const iconaOra = getMeteoIcona(hourly.weather_code[h]).icon;
-                const umiditaOra = hourly.relative_humidity_2m[h];
-                const ventoOra = Math.round(hourly.wind_speed_10m[h]);
-                const uvOra = hourly.uv_index[h];
-                const uvOraInfo = getUVDettagli(uvOra);
-                const probPioggiaOra = hourly.precipitation_probability ? hourly.precipitation_probability[h] : 0;
-
+            for (let h = i * 24; h < (i * 24) + 24; h += 2) {
                 righeOrarieHtml += `
                     <tr>
-                        <td><strong>${stringaOra}</strong></td>
-                        <td>${iconaOra}</td>
-                        <td>${tempOra}°C</td>
-                        <td>💧 <strong>${probPioggiaOra}%</strong></td>
-                        <td>${umiditaOra}%</td>
-                        <td>💨 ${ventoOra} km/h</td>
-                        <td>☀️ <span class="uv-badge ${uvOraInfo.classe}">${uvOra.toFixed(1)}</span></td>
+                        <td><strong>${hourly.time[h].split('T')[1]}</strong></td>
+                        <td>${getMeteoIcona(hourly.weather_code[h]).icon}</td>
+                        <td>${Math.round(hourly.temperature_2m[h])}°C</td>
+                        <td>💧 <strong>${hourly.precipitation_probability ? hourly.precipitation_probability[h] : 0}%</strong></td>
+                        <td>${hourly.relative_humidity_2m[h]}%</td>
+                        <td>💨 ${Math.round(hourly.wind_speed_10m[h])} km/h</td>
+                        <td>☀️ <span class="uv-badge ${getUVDettagli(hourly.uv_index[h]).classe}">${hourly.uv_index[h].toFixed(1)}</span></td>
                     </tr>
                 `;
             }
 
-            const dayBlock = `
+            container.innerHTML += `
                 <details class="day-collapse">
                     <summary>
                         <div class="summary-content">
                             <div class="summary-left">
-                                <span class="forecast-icon" title="${infoMeteo.desc}">${infoMeteo.icon}</span>
+                                <span class="forecast-icon">${getMeteoIcona(daily.weather_code[i]).icon}</span>
                                 <span style="text-transform: capitalize;"><strong>${dataFormattata}</strong></span>
                             </div>
                             <div class="summary-right">
                                 <span><span class="temp-max">${Math.round(daily.temperature_2m_max[i])}°C</span> / <span class="temp-min">${Math.round(daily.temperature_2m_min[i])}°C</span></span>
-                                <span>🌧️ ${daily.precipitation_sum[i]} mm (${probPioggiaMaxGiorno}%)</span>
-                                <span>☀️ UV: <span class="uv-badge ${uvMaxInfo.classe}">${Math.round(uvMaxGiorno)}</span></span>
+                                <span>🌧️ ${daily.precipitation_sum[i]} mm (${daily.precipitation_probability_max[i]}%)</span>
+                                <span>☀️ UV: <span class="uv-badge ${getUVDettagli(daily.uv_index_max[i]).classe}">${Math.round(daily.uv_index_max[i])}</span></span>
                                 <span style="font-size: 0.85rem; color:#0077b6;">▼</span>
                             </div>
                         </div>
                     </summary>
                     <div class="hourly-content">
                         <table class="hourly-table">
-                            <thead>
-                                <tr>
-                                    <th>Orario</th>
-                                    <th>Cielo</th>
-                                    <th>Temp</th>
-                                    <th>Pioggia</th>
-                                    <th>Umidità</th>
-                                    <th>Vento</th>
-                                    <th>Indice UV</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${righeOrarieHtml}
-                            </tbody>
+                            <thead><tr><th>Orario</th><th>Cielo</th><th>Temp</th><th>Pioggia</th><th>Umidità</th><th>Vento</th><th>Indice UV</th></tr></thead>
+                            <tbody>${righeOrarieHtml}</tbody>
                         </table>
                     </div>
                 </details>
             `;
-            container.innerHTML += dayBlock;
         }
-
         document.getElementById('forecast-section').style.display = 'block';
     }
 
@@ -534,8 +496,8 @@
         errorBox.style.display = 'block';
     }
 
-    // Prova a geolocalizzare automaticamente all'avvio dell'applicazione
     window.onload = () => {
+        mostraPreferiti();
         attivaGeolocalizzazione();
     };
 </script>
